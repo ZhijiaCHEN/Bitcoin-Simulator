@@ -26,8 +26,12 @@
 #include "ns3/ipv6-address-generator.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/double.h"
+#include "../../rapidjson/document.h"
+#include "../../rapidjson/writer.h"
+#include "../../rapidjson/stringbuffer.h"
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <time.h>
 #include <sys/time.h>
 
@@ -1437,6 +1441,50 @@ BitcoinTopologyHelper::GetNodesInternetSpeeds (void) const
   return m_nodesInternetSpeeds;
 }
 
+void
+BitcoinTopologyHelper::parse_topology(const char *topoFile, Document& topoJson)
+{
+    ifstream in(topoFile);
+    string contents((istreambuf_iterator<char>(in)), istreambuf_iterator<char>());
+    const char* json = contents.c_str();
+    topoJson.Parse(json);
+    check_topology(topoJson);
+}
+
+void
+BitcoinTopologyHelper::check_topology(const Document &topoJson)
+{
+    assert(topoJson.HasMember("nodes"));
+    const Value& nodes = topoJson["nodes"];
+    assert(nodes.IsArray());
+
+    for (auto& node : nodes.GetArray())
+    {
+        assert(node.HasMember("id"));
+        assert(node["id"].IsInt());
+
+        assert(node.HasMember("region"));
+        assert(node["region"].IsString());
+
+        assert(node.HasMember("bandwidth"));
+        assert(node["bandwidth"].IsNumber());
+
+        assert(node.HasMember("isMiner"));
+        assert(node["isMiner"].IsBool());
+
+        assert(node.HasMember("neighbor"));
+        assert(node["neighbor"].IsArray());
+        for (auto& neighbor : node["neighbor"].GetArray())
+        {
+            assert(neighbor.HasMember("id"));
+            assert(neighbor["id"].IsInt());
+
+            assert(neighbor.HasMember("distance"));
+            assert(neighbor["distance"].IsNumber());
+        }
+    }
+}
+
 } // namespace ns3
 
 static double GetWallTime()
@@ -1448,3 +1496,4 @@ static double GetWallTime()
     }
     return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
+

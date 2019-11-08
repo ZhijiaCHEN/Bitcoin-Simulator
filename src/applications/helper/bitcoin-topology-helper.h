@@ -139,6 +139,8 @@ private:
 
   void AssignRegion (uint32_t id);
   void AssignInternetSpeeds(uint32_t id);
+  void check_topology(const Document &topoJson);
+  void parse_topology(const char *topoFile, Document& topoJson);
   
   uint32_t     m_totalNoNodes;                  //!< The total number of nodes
   uint32_t     m_noMiners;                      //!< The total number of miners
@@ -188,6 +190,7 @@ private:
   std::piecewise_constant_distribution<double>   m_southAmericaUploadBandwidthDistribution;
   std::piecewise_constant_distribution<double>   m_australiaDownloadBandwidthDistribution;
   std::piecewise_constant_distribution<double>   m_australiaUploadBandwidthDistribution;
+
 };
 
 
