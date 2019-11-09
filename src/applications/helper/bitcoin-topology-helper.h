@@ -30,7 +30,11 @@
 #include "net-device-container.h"
 #include "ipv4-address-helper-custom.h"
 #include "ns3/bitcoin.h"
+#include "../../rapidjson/document.h"
+#include "../../rapidjson/writer.h"
+#include "../../rapidjson/stringbuffer.h"
 #include <random>
+using namespace rapidjson;
 
 namespace ns3 {
 
@@ -139,9 +143,10 @@ private:
 
   void AssignRegion (uint32_t id);
   void AssignInternetSpeeds(uint32_t id);
-  void check_topology(const Document &topoJson);
-  void parse_topology(const char *topoFile, Document& topoJson);
+  void check_topology();
+  void parse_topology(const char *topoFile);
   
+  Document topoJson;
   uint32_t     m_totalNoNodes;                  //!< The total number of nodes
   uint32_t     m_noMiners;                      //!< The total number of miners
   uint32_t     m_noCpus;                        //!< The number of the available cpus in the simulation
