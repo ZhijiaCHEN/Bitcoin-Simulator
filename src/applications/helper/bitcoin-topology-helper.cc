@@ -1850,8 +1850,8 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
     m_regionUploadSpeeds[AUSTRALIA] = 6.1;
     srand (1000);
 
-    m_totalNoNodes = topoJson["totalNoNodes"];
-    noMiners = topoJson["noMiners"];
+    m_totalNoNodes = topoJson["totalNoNodes"].GetInt();
+    m_noMiners = topoJson["noMiners"].GetInt();
     // Bounds check
     if (m_noMiners > m_totalNoNodes)
     {
@@ -1862,7 +1862,7 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
     {
         NS_FATAL_ERROR ("You need at least one miner\n");
     }
-
+    std::cout<<"m_totalNoNodes: "<<m_totalNoNodes<<std::endl;
     m_bitcoinNodesRegion = new uint32_t[m_totalNoNodes];
 
     m_europeDownloadBandwidthDistribution = std::piecewise_constant_distribution<double> (downloadBandwitdhIntervals.begin(), downloadBandwitdhIntervals.end(), EuropeDownloadWeights.begin());
@@ -1877,7 +1877,7 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
 
     m_asiaPacificUploadBandwidthDistribution = std::piecewise_constant_distribution<double> (uploadBandwitdhIntervals.begin(), uploadBandwitdhIntervals.end(), AsiaPacificUploadWeights.begin());
 
-    m_japanDownloadBandwidthDistribution = std::piecewise_constant_distribution<double> (downloadBandwitdhIntervals.begin(), downloadBandwitdhIntervals.end(), JapanDownloadWeights.begin();
+    m_japanDownloadBandwidthDistribution = std::piecewise_constant_distribution<double> (downloadBandwitdhIntervals.begin(), downloadBandwitdhIntervals.end(), JapanDownloadWeights.begin());
 
     m_japanUploadBandwidthDistribution = std::piecewise_constant_distribution<double> (uploadBandwitdhIntervals.begin(), uploadBandwitdhIntervals.end(), JapanUploadWeights.begin());
 
@@ -1889,22 +1889,24 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
 
     m_australiaUploadBandwidthDistribution = std::piecewise_constant_distribution<double> (uploadBandwitdhIntervals.begin(), uploadBandwitdhIntervals.end(), AustraliaUploadWeights.begin());
   
+    
     m_minersRegions = new enum BitcoinRegion[m_noMiners];
-
 
     int nodeID = 0;
     int minerID = 0;
-    for (auto& node : topoJson["nodes"])
+    for (auto& node : topoJson["nodes"].GetArray())
     {
-        for (auto& neighbor : node["neighbor"])
+        m_bitcoinNodesRegion[nodeID] = node["region"].GetInt();
+        std::cout<<"set node id "<<nodeID<<" to region "<<m_bitcoinNodesRegion[nodeID]<<std::endl;
+        for (auto& neighbor : node["neighbor"].GetArray())
         {
-            m_nodesConnections[nodeID].push_back(neighbor["id"]);
+            m_nodesConnections[nodeID].push_back(neighbor["id"].GetInt());
         }
 
-        if(node["isMiner"])
+        if(node["isMiner"].GetBool())
         {
-            m_minersRegions[minerID] = node["region"];
             m_miners.push_back(nodeID);
+            m_minersHashRate.push_back(node["hashRate"].GetDouble());
             minerID++;
         }
         nodeID++;
@@ -1946,10 +1948,10 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
     {
         NodeContainer currentNode;
         currentNode.Create (1, i % m_noCpus);
-    /* 	if (m_systemId == 0)
-        std::cout << "Creating a node with Id = " << i << " and systemId = " << i % m_noCpus << "\n"; */
+        if (m_systemId == 0)
+        std::cout << "Creating a node with Id = " << i << " and systemId = " << i % m_noCpus << "\n";
         m_nodes.push_back (currentNode);
-        AssignRegion(i);
+        //AssignRegion(i);
         AssignInternetSpeeds(i);
     }
 
@@ -1962,33 +1964,33 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
 
         for(int i = 0; i < m_totalNoNodes; i++)
         {
-        if ( std::find(m_miners.begin(), m_miners.end(), i) == m_miners.end())
-        {
-            downloadRegionBandwidths[m_bitcoinNodesRegion[i]].push_back(m_nodesInternetSpeeds[i].downloadSpeed);
-            uploadRegionBandwidths[m_bitcoinNodesRegion[i]].push_back(m_nodesInternetSpeeds[i].uploadSpeed);
-        }
+            if ( std::find(m_miners.begin(), m_miners.end(), i) == m_miners.end())
+            {
+                downloadRegionBandwidths[m_bitcoinNodesRegion[i]].push_back(m_nodesInternetSpeeds[i].downloadSpeed);
+                uploadRegionBandwidths[m_bitcoinNodesRegion[i]].push_back(m_nodesInternetSpeeds[i].uploadSpeed);
+            }
         }
 
         for (auto region : downloadRegionBandwidths)
         {
-        double average = 0;
-        for (auto &speed : region.second)
-        {
-            average += speed;
-        }
-        
-        std::cout << "The download speed for region " << getBitcoinRegion(getBitcoinEnum(region.first)) << " = " << average / region.second.size() << " Mbps\n";
+            double average = 0;
+            for (auto &speed : region.second)
+            {
+                average += speed;
+            }
+            
+            std::cout << "The download speed for region " << getBitcoinRegion(getBitcoinEnum(region.first)) << " = " << average / region.second.size() << " Mbps\n";
         }
         
         for (auto region : uploadRegionBandwidths)
         {
-        double average = 0;
-        for (auto &speed : region.second)
-        {
-            average += speed;
-        }
-        
-        std::cout << "The upload speed for region " << getBitcoinRegion(getBitcoinEnum(region.first)) << " = " << average / region.second.size() << " Mbps\n";
+            double average = 0;
+            for (auto &speed : region.second)
+            {
+                average += speed;
+            }
+            
+            std::cout << "The upload speed for region " << getBitcoinRegion(getBitcoinEnum(region.first)) << " = " << average / region.second.size() << " Mbps\n";
         }
     }
     
@@ -2004,53 +2006,52 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
 
         for(std::vector<uint32_t>::const_iterator it = m_nodesConnections[*miner].begin(); it != m_nodesConnections[*miner].begin() + m_miners.size() - 1; it++)
         {
-        if ( *it > *miner)	//Do not recreate links
-        {
-            NetDeviceContainer newDevices;
-            
-            m_totalNoLinks++;
-            
-            double bandwidth = std::min(std::min(m_nodesInternetSpeeds[m_nodes.at (*miner).Get (0)->GetId()].uploadSpeed, 
-                                        m_nodesInternetSpeeds[m_nodes.at (*miner).Get (0)->GetId()].downloadSpeed),
-                                        std::min(m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].uploadSpeed, 
-                                        m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].downloadSpeed));					
-            bandwidthStream.str("");
-            bandwidthStream.clear();
-            bandwidthStream << bandwidth << "Mbps";
-            
-            latencyStringStream.str("");
-            latencyStringStream.clear();
-            
-            if (m_latencyParetoShapeDivider > 0)
+            if ( *it > *miner)	//Do not recreate links
             {
-            Ptr<ParetoRandomVariable> paretoDistribution = CreateObject<ParetoRandomVariable> ();
-            paretoDistribution->SetAttribute ("Mean", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]]
-                                                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]]));
-            paretoDistribution->SetAttribute ("Shape", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]]
-                                                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] / m_latencyParetoShapeDivider));
-            latencyStringStream << paretoDistribution->GetValue() << "ms";
-            }
-            else
-            {
-            latencyStringStream << m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]]
-                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] << "ms";
-            }
+                NetDeviceContainer newDevices;
+                
+                m_totalNoLinks++;
+                
+                double bandwidth = std::min(std::min(m_nodesInternetSpeeds[m_nodes.at (*miner).Get (0)->GetId()].uploadSpeed, 
+                                            m_nodesInternetSpeeds[m_nodes.at (*miner).Get (0)->GetId()].downloadSpeed),
+                                            std::min(m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].uploadSpeed, 
+                                            m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].downloadSpeed));					
+                bandwidthStream.str("");
+                bandwidthStream.clear();
+                bandwidthStream << bandwidth << "Mbps";
+                
+                latencyStringStream.str("");
+                latencyStringStream.clear();
+                
+                if (m_latencyParetoShapeDivider > 0)
+                {
+                    Ptr<ParetoRandomVariable> paretoDistribution = CreateObject<ParetoRandomVariable> ();
+                    paretoDistribution->SetAttribute ("Scale", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]]
+                                                                                            [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]]));
+                    paretoDistribution->SetAttribute ("Shape", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]]
+                                                                                            [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] / m_latencyParetoShapeDivider));
+                    latencyStringStream << paretoDistribution->GetValue() << "ms";
+                }
+                else
+                {
+                    latencyStringStream << m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]][m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] << "ms";
+                }
 
-            
-            pointToPoint.SetDeviceAttribute ("DataRate", StringValue (bandwidthStream.str()));
-            pointToPoint.SetChannelAttribute ("Delay", StringValue (latencyStringStream.str()));
-            
-            newDevices.Add (pointToPoint.Install (m_nodes.at (*miner).Get (0), m_nodes.at (*it).Get (0)));
-            m_devices.push_back (newDevices);
-    /* 		if (m_systemId == 0)
-            std::cout << "Creating link " << m_totalNoLinks << " between nodes " 
-                        << (m_nodes.at (*miner).Get (0))->GetId() << " (" 
-                        <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]))
-                        << ") and node " << (m_nodes.at (*it).Get (0))->GetId() << " (" 
-                        <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]))
-                        << ") with latency = " << latencyStringStream.str() 
-                        << " and bandwidth = " << bandwidthStream.str() << ".\n"; */
-        }
+                
+                pointToPoint.SetDeviceAttribute ("DataRate", StringValue (bandwidthStream.str()));
+                pointToPoint.SetChannelAttribute ("Delay", StringValue (latencyStringStream.str()));
+                
+                newDevices.Add (pointToPoint.Install (m_nodes.at (*miner).Get (0), m_nodes.at (*it).Get (0)));
+                m_devices.push_back (newDevices);
+                if (m_systemId == 0)
+                std::cout << "Creating link " << m_totalNoLinks << " between nodes " 
+                            << (m_nodes.at (*miner).Get (0))->GetId() << " (" 
+                            <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*miner).Get (0))->GetId()]))
+                            << ") and node " << (m_nodes.at (*it).Get (0))->GetId() << " (" 
+                            <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]))
+                            << ") with latency = " << latencyStringStream.str() 
+                            << " and bandwidth = " << bandwidthStream.str() << ".\n";
+            }
         }
     }
     
@@ -2060,53 +2061,52 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
         for(std::vector<uint32_t>::const_iterator it = node.second.begin(); it != node.second.end(); it++)
         {
         
-        if ( *it > node.first && (std::find(m_miners.begin(), m_miners.end(), *it) == m_miners.end() || 
-            std::find(m_miners.begin(), m_miners.end(), node.first) == m_miners.end()))	//Do not recreate links
-        {
-            NetDeviceContainer newDevices;
-            
-            m_totalNoLinks++;
-            
-            double bandwidth = std::min(std::min(m_nodesInternetSpeeds[m_nodes.at (node.first).Get (0)->GetId()].uploadSpeed, 
-                                        m_nodesInternetSpeeds[m_nodes.at (node.first).Get (0)->GetId()].downloadSpeed),
-                                        std::min(m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].uploadSpeed, 
-                                        m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].downloadSpeed));					
-            bandwidthStream.str("");
-            bandwidthStream.clear();
-            bandwidthStream << bandwidth << "Mbps";
-            
-            latencyStringStream.str("");
-            latencyStringStream.clear();
-            
-            if (m_latencyParetoShapeDivider > 0)
+            if ( *it > node.first && (std::find(m_miners.begin(), m_miners.end(), *it) == m_miners.end() || std::find(m_miners.begin(), m_miners.end(), node.first) == m_miners.end()))	//Do not recreate links
             {
-            Ptr<ParetoRandomVariable> paretoDistribution = CreateObject<ParetoRandomVariable> ();
-            paretoDistribution->SetAttribute ("Mean", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
-                                                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]]));
-            paretoDistribution->SetAttribute ("Shape", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
-                                                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] / m_latencyParetoShapeDivider));
-            latencyStringStream << paretoDistribution->GetValue() << "ms";
+                NetDeviceContainer newDevices;
+                
+                m_totalNoLinks++;
+                
+                double bandwidth = std::min(std::min(m_nodesInternetSpeeds[m_nodes.at (node.first).Get (0)->GetId()].uploadSpeed, 
+                                            m_nodesInternetSpeeds[m_nodes.at (node.first).Get (0)->GetId()].downloadSpeed),
+                                            std::min(m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].uploadSpeed, 
+                                            m_nodesInternetSpeeds[m_nodes.at (*it).Get (0)->GetId()].downloadSpeed));					
+                bandwidthStream.str("");
+                bandwidthStream.clear();
+                bandwidthStream << bandwidth << "Mbps";
+                
+                latencyStringStream.str("");
+                latencyStringStream.clear();
+                
+                if (m_latencyParetoShapeDivider > 0)
+                    {
+                    Ptr<ParetoRandomVariable> paretoDistribution = CreateObject<ParetoRandomVariable> ();
+                    paretoDistribution->SetAttribute ("Scale", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
+                                                                                            [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]]));
+                    paretoDistribution->SetAttribute ("Shape", DoubleValue (m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
+                                                                                            [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] / m_latencyParetoShapeDivider));
+                    latencyStringStream << paretoDistribution->GetValue() << "ms";
+                }
+                else
+                {
+                    latencyStringStream << m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
+                                                        [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] << "ms";
+                }
+                
+                pointToPoint.SetDeviceAttribute ("DataRate", StringValue (bandwidthStream.str()));
+                pointToPoint.SetChannelAttribute ("Delay", StringValue (latencyStringStream.str()));
+                
+                newDevices.Add (pointToPoint.Install (m_nodes.at (node.first).Get (0), m_nodes.at (*it).Get (0)));
+                m_devices.push_back (newDevices);
+                if (m_systemId == 0)
+                std::cout << "Creating link " << m_totalNoLinks << " between nodes " 
+                            << (m_nodes.at (node.first).Get (0))->GetId() << " (" 
+                            <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]))
+                            << ") and node " << (m_nodes.at (*it).Get (0))->GetId() << " (" 
+                            <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]))
+                            << ") with latency = " << latencyStringStream.str() 
+                            << " and bandwidth = " << bandwidthStream.str() << ".\n";
             }
-            else
-            {
-            latencyStringStream << m_regionLatencies[m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]]
-                                                    [m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]] << "ms";
-            }
-            
-            pointToPoint.SetDeviceAttribute ("DataRate", StringValue (bandwidthStream.str()));
-            pointToPoint.SetChannelAttribute ("Delay", StringValue (latencyStringStream.str()));
-            
-            newDevices.Add (pointToPoint.Install (m_nodes.at (node.first).Get (0), m_nodes.at (*it).Get (0)));
-            m_devices.push_back (newDevices);
-    /* 		if (m_systemId == 0)
-            std::cout << "Creating link " << m_totalNoLinks << " between nodes " 
-                        << (m_nodes.at (node.first).Get (0))->GetId() << " (" 
-                        <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (node.first).Get (0))->GetId()]))
-                        << ") and node " << (m_nodes.at (*it).Get (0))->GetId() << " (" 
-                        <<  getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[(m_nodes.at (*it).Get (0))->GetId()]))
-                        << ") with latency = " << latencyStringStream.str() 
-                        << " and bandwidth = " << bandwidthStream.str() << ".\n"; */
-        }
         }
     }
     
@@ -2118,8 +2118,14 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
 
 BitcoinTopologyHelper::~BitcoinTopologyHelper ()
 {
-  delete[] m_bitcoinNodesRegion;
-  delete[] m_minersRegions;
+    if (m_bitcoinNodesRegion)
+    {
+        delete[] m_bitcoinNodesRegion;
+    }
+    if (m_minersRegions)
+    {
+        delete[] m_minersRegions;
+    }
 }
 
 void
@@ -2165,9 +2171,9 @@ BitcoinTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelperCustom ip)
 
 /*     if (m_systemId == 0)
       std::cout << i << "/" << m_devices.size () << "\n"; */
-/* 	if (m_systemId == 0)
-	  std::cout << "Node " << node1 << "(" << interfaceAddress1 << ") is connected with node  " 
-                << node2 << "(" << interfaceAddress2 << ")\n"; */
+    if (m_systemId == 0)
+        std::cout << "Node " << node1 << "(" << interfaceAddress1 << ") is connected with node  " 
+                  << node2 << "(" << interfaceAddress2 << ")\n";
 				
 	m_nodesConnectionsIps[node1].push_back(interfaceAddress2);
 	m_nodesConnectionsIps[node2].push_back(interfaceAddress1);
@@ -2242,6 +2248,12 @@ BitcoinTopologyHelper::GetMiners (void) const
   return m_miners;
 }
 
+std::vector<double>
+BitcoinTopologyHelper::GetMinersHashRate(void) const
+{
+    return m_minersHashRate;
+}
+
 void
 BitcoinTopologyHelper::AssignRegion (uint32_t id)
 {
@@ -2311,9 +2323,9 @@ BitcoinTopologyHelper::AssignInternetSpeeds(uint32_t id)
     }
   }
   
-/*  if (m_systemId == 0)
+    if (m_systemId == 0)
     std::cout << "SystemId = " << m_systemId << " assigned node " << id << " in " << getBitcoinRegion(getBitcoinEnum(m_bitcoinNodesRegion[id])) 
-              << " with download speed = " << m_nodesInternetSpeeds[id].downloadSpeed << " Mbps and upload speed " << m_nodesInternetSpeeds[id].uploadSpeed << " Mbps\n"; */
+              << " with download speed = " << m_nodesInternetSpeeds[id].downloadSpeed << " Mbps and upload speed " << m_nodesInternetSpeeds[id].uploadSpeed << " Mbps\n";
 }
 
 
@@ -2344,6 +2356,12 @@ BitcoinTopologyHelper::GetNodesInternetSpeeds (void) const
   return m_nodesInternetSpeeds;
 }
 
+const Document& 
+BitcoinTopologyHelper::GetTopologyJson (void) const
+{
+    return topoJson;
+}
+
 void
 BitcoinTopologyHelper::parse_topology(const char *topoFile)
 {
@@ -2359,17 +2377,20 @@ BitcoinTopologyHelper::parse_topology(const char *topoFile)
     for (auto& node : nodes.GetArray())
     {
         totalNoNodes += 1;
-        if (node["isMiner"])
+        if (node["isMiner"].GetBool())
         {
             noMiners += 1;
         }
     }
     topoJson.AddMember("totalNoNodes", totalNoNodes, allocator);
     topoJson.AddMember("noMiners", noMiners, allocator);
+    std::cout<<"totalNodes: "<<topoJson["totalNoNodes"].GetInt()<<std::endl;
+    std::cout<<"noMiners: "<<topoJson["noMiners"].GetInt()<<std::endl;
+    
 }
 
-void const
-BitcoinTopologyHelper::check_topology()
+void
+BitcoinTopologyHelper::check_topology() const
 {
     assert(topoJson.HasMember("nodes"));
     const Value& nodes = topoJson["nodes"];
@@ -2380,7 +2401,7 @@ BitcoinTopologyHelper::check_topology()
     {
         assert(node.HasMember("id"));
         assert(node["id"].IsInt());
-        assert(node["id"] == idItr);
+        assert(node["id"].GetInt() == idItr);
         idItr += 1;
 
         assert(node.HasMember("region"));
@@ -2391,6 +2412,12 @@ BitcoinTopologyHelper::check_topology()
 
         assert(node.HasMember("isMiner"));
         assert(node["isMiner"].IsBool());
+        if (node["isMiner"].GetBool())
+        {
+            assert(node.HasMember("hashRate"));
+            assert(node["hashRate"].IsNumber());
+        }
+        
 
         assert(node.HasMember("neighbor"));
         assert(node["neighbor"].IsArray());
@@ -2398,9 +2425,9 @@ BitcoinTopologyHelper::check_topology()
         {
             assert(neighbor.HasMember("id"));
             assert(neighbor["id"].IsInt());
-            if(neighbor["id"] > maxNeighborID)
+            if(neighbor["id"].GetInt() > maxNeighborID)
             {
-                maxNeighborID = neighbor["id"];
+                maxNeighborID = neighbor["id"].GetInt();
             }
 
             assert(neighbor.HasMember("distance"));

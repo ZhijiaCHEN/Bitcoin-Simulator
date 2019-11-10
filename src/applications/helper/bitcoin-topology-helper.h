@@ -59,142 +59,149 @@ public:
    *                     to connect all of the nodes together 
    *                     in the grid
    */
-  BitcoinTopologyHelper (uint32_t noCpus, uint32_t totalNoNodes, uint32_t noMiners, enum BitcoinRegion *minersRegions,
+    BitcoinTopologyHelper (uint32_t noCpus, uint32_t totalNoNodes, uint32_t noMiners, enum BitcoinRegion *minersRegions,
                          enum Cryptocurrency cryptocurrency, int minConnectionsPerNode, int maxConnectionsPerNode, 
                          double latencyParetoShapeDivider, uint32_t systemId);
+    BitcoinTopologyHelper (const char* topoFile, uint32_t noCpus, enum Cryptocurrency cryptocurrency, 
+                           double latencyParetoShapeDivider, uint32_t systemId);
 
-  ~BitcoinTopologyHelper ();
+    ~BitcoinTopologyHelper ();
 
-  /**
-   * \param row the row address of the node desired
-   *
-   * \param col the column address of the node desired
-   *
-   * \returns a pointer to the node specified by the 
-   *          (row, col) address
-   */
-  Ptr<Node> GetNode (uint32_t id);
+    /**
+     * \param row the row address of the node desired
+     *
+     * \param col the column address of the node desired
+     *
+     * \returns a pointer to the node specified by the 
+     *          (row, col) address
+     */
+    Ptr<Node> GetNode (uint32_t id);
 
-  /**
-   * This returns an Ipv4 address at the node specified by 
-   * the (row, col) address.  Technically, a node will have 
-   * multiple interfaces in the grid; therefore, it also has 
-   * multiple Ipv4 addresses.  This method only returns one of 
-   * the addresses. If you picture the grid, the address returned 
-   * is the left row device of all the nodes, except the left-most 
-   * grid nodes, which returns the right row device.
-   *
-   * \param row the row address of the node desired
-   *
-   * \param col the column address of the node desired
-   *
-   * \returns Ipv4Address of one of the interfaces of the node 
-   *          specified by the (row, col) address
-   */
-  Ipv4Address GetIpv4Address (uint32_t row, uint32_t col);
-
-
-  /**
-   * \param stack an InternetStackHelper which is used to install 
-   *              on every node in the grid
-   */
-  void InstallStack (InternetStackHelper stack);
-
-  /**
-   * Assigns Ipv4 addresses to all the row and column interfaces
-   *
-   * \param ip the Ipv4AddressHelper used to assign Ipv4 addresses 
-   *              to all of the row interfaces in the grid
-   *
-   * \param ip the Ipv4AddressHelper used to assign Ipv4 addresses 
-   *              to all of the row interfaces in the grid
-   */
-  void AssignIpv4Addresses (Ipv4AddressHelperCustom ip);
+    /**
+     * This returns an Ipv4 address at the node specified by 
+     * the (row, col) address.  Technically, a node will have 
+     * multiple interfaces in the grid; therefore, it also has 
+     * multiple Ipv4 addresses.  This method only returns one of 
+     * the addresses. If you picture the grid, the address returned 
+     * is the left row device of all the nodes, except the left-most 
+     * grid nodes, which returns the right row device.
+     *
+     * \param row the row address of the node desired
+     *
+     * \param col the column address of the node desired
+     *
+     * \returns Ipv4Address of one of the interfaces of the node 
+     *          specified by the (row, col) address
+     */
+    Ipv4Address GetIpv4Address (uint32_t row, uint32_t col);
 
 
-  /**
-   * Sets up the node canvas locations for every node in the grid.
-   * This is needed for use with the animation interface
-   *
-   * \param ulx upper left x value
-   * \param uly upper left y value
-   * \param lrx lower right x value
-   * \param lry lower right y value
-   */
-  void BoundingBox (double ulx, double uly, double lrx, double lry);
+    /**
+     * \param stack an InternetStackHelper which is used to install 
+     *              on every node in the grid
+     */
+    void InstallStack (InternetStackHelper stack);
 
-  /**
-   * Get the interface container
-   */
-   Ipv4InterfaceContainer GetIpv4InterfaceContainer (void) const;
-   
-   std::map<uint32_t, std::vector<Ipv4Address>> GetNodesConnectionsIps (void) const;
-   
-   std::vector<uint32_t> GetMiners (void) const;
-   
-   uint32_t* GetBitcoinNodesRegions (void);
-   
-   std::map<uint32_t, std::map<Ipv4Address, double>> GetPeersDownloadSpeeds(void) const;
-   std::map<uint32_t, std::map<Ipv4Address, double>> GetPeersUploadSpeeds(void) const;
+    /**
+     * Assigns Ipv4 addresses to all the row and column interfaces
+     *
+     * \param ip the Ipv4AddressHelper used to assign Ipv4 addresses 
+     *              to all of the row interfaces in the grid
+     *
+     * \param ip the Ipv4AddressHelper used to assign Ipv4 addresses 
+     *              to all of the row interfaces in the grid
+     */
+    void AssignIpv4Addresses (Ipv4AddressHelperCustom ip);
 
-   std::map<uint32_t, nodeInternetSpeeds> GetNodesInternetSpeeds (void) const;
+
+    /**
+     * Sets up the node canvas locations for every node in the grid.
+     * This is needed for use with the animation interface
+     *
+     * \param ulx upper left x value
+     * \param uly upper left y value
+     * \param lrx lower right x value
+     * \param lry lower right y value
+     */
+    void BoundingBox (double ulx, double uly, double lrx, double lry);
+
+    /**
+     * Get the interface container
+     */
+    Ipv4InterfaceContainer GetIpv4InterfaceContainer (void) const;
+    
+    std::map<uint32_t, std::vector<Ipv4Address>> GetNodesConnectionsIps (void) const;
+    
+    std::vector<uint32_t> GetMiners (void) const;
+    
+    std::vector<double> GetMinersHashRate(void) const;
+
+    uint32_t* GetBitcoinNodesRegions (void);
+    
+    std::map<uint32_t, std::map<Ipv4Address, double>> GetPeersDownloadSpeeds(void) const;
+    std::map<uint32_t, std::map<Ipv4Address, double>> GetPeersUploadSpeeds(void) const;
+
+    std::map<uint32_t, nodeInternetSpeeds> GetNodesInternetSpeeds (void) const;
+
+    const Document& GetTopologyJson (void) const;
 
 private:
 
-  void AssignRegion (uint32_t id);
-  void AssignInternetSpeeds(uint32_t id);
-  void check_topology();
-  void parse_topology(const char *topoFile);
-  
-  Document topoJson;
-  uint32_t     m_totalNoNodes;                  //!< The total number of nodes
-  uint32_t     m_noMiners;                      //!< The total number of miners
-  uint32_t     m_noCpus;                        //!< The number of the available cpus in the simulation
-  double       m_latencyParetoShapeDivider;     //!<  The pareto shape for the latency of the point-to-point links
-  int          m_minConnectionsPerNode;         //!<  The minimum connections per node
-  int          m_maxConnectionsPerNode;         //!<  The maximum connections per node
-  int          m_minConnectionsPerMiner;        //!<  The minimum connections per node
-  int          m_maxConnectionsPerMiner;        //!<  The maximum connections per node
-  double       m_minerDownloadSpeed;            //!<  The download speed of miners
-  double       m_minerUploadSpeed;              //!<  The upload speed of miners
-  uint32_t     m_totalNoLinks;                  //!<  Total number of links
-  uint32_t     m_systemId;
-  
-  enum BitcoinRegion                             *m_minersRegions;
-  enum Cryptocurrency                             m_cryptocurrency;
-  std::vector<uint32_t>                           m_miners;                  //!< The ids of the miners
-  std::map<uint32_t, std::vector<uint32_t>>       m_nodesConnections;        //!< key = nodeId
-  std::map<uint32_t, std::vector<Ipv4Address>>    m_nodesConnectionsIps;     //!< key = nodeId
-  std::vector<NodeContainer>                      m_nodes;                   //!< all the nodes in the network
-  std::vector<NetDeviceContainer>                 m_devices;                 //!< NetDevices in the network
-  std::vector<Ipv4InterfaceContainer>             m_interfaces;              //!< IPv4 interfaces in the network
-  uint32_t                                       *m_bitcoinNodesRegion;      //!< The region in which the bitcoin nodes are located
-  double                                          m_regionLatencies[6][6];   //!< The inter- and intra-region latencies
-  double                                          m_regionDownloadSpeeds[6];     
-  double                                          m_regionUploadSpeeds[6];     
-  
+    void AssignRegion (uint32_t id);
+    void AssignInternetSpeeds(uint32_t id);
+    void check_topology() const;
+    void parse_topology(const char *topoFile);
+    
+    Document topoJson;
+    uint32_t     m_totalNoNodes;                  //!< The total number of nodes
+    uint32_t     m_noMiners;                      //!< The total number of miners
+    uint32_t     m_noCpus;                        //!< The number of the available cpus in the simulation
+    double       m_latencyParetoShapeDivider;     //!<  The pareto shape for the latency of the point-to-point links
+    int          m_minConnectionsPerNode;         //!<  The minimum connections per node
+    int          m_maxConnectionsPerNode;         //!<  The maximum connections per node
+    int          m_minConnectionsPerMiner;        //!<  The minimum connections per node
+    int          m_maxConnectionsPerMiner;        //!<  The maximum connections per node
+    double       m_minerDownloadSpeed;            //!<  The download speed of miners
+    double       m_minerUploadSpeed;              //!<  The upload speed of miners
+    uint32_t     m_totalNoLinks;                  //!<  Total number of links
+    uint32_t     m_systemId;
+    
+    enum BitcoinRegion                             *m_minersRegions = nullptr;
+    enum Cryptocurrency                             m_cryptocurrency;
+    std::vector<uint32_t>                           m_miners;                           //!< The ids of the miners
+    std::vector<double>                             m_minersHashRate;                   //!< The hash rate of the miners
+    std::map<uint32_t, std::vector<uint32_t>>       m_nodesConnections;                 //!< key = nodeId
+    std::map<uint32_t, std::vector<Ipv4Address>>    m_nodesConnectionsIps;              //!< key = nodeId
+    std::vector<NodeContainer>                      m_nodes;                            //!< all the nodes in the network
+    std::vector<NetDeviceContainer>                 m_devices;                          //!< NetDevices in the network
+    std::vector<Ipv4InterfaceContainer>             m_interfaces;                       //!< IPv4 interfaces in the network
+    uint32_t                                       *m_bitcoinNodesRegion = nullptr;     //!< The region in which the bitcoin nodes are located
+    double                                          m_regionLatencies[6][6];            //!< The inter- and intra-region latencies
+    double                                          m_regionDownloadSpeeds[6];     
+    double                                          m_regionUploadSpeeds[6];     
+    
 
-  std::map<uint32_t, std::map<Ipv4Address, double>>    m_peersDownloadSpeeds;     //!< key1 = nodeId, key2 = Ipv4Address of peer
-  std::map<uint32_t, std::map<Ipv4Address, double>>    m_peersUploadSpeeds;       //!< key1 = nodeId, key2 = Ipv4Address of peer
-  std::map<uint32_t, nodeInternetSpeeds>               m_nodesInternetSpeeds;     //!< key = nodeId
-  std::map<uint32_t, int>                              m_minConnections;          //!< key = nodeId
-  std::map<uint32_t, int>                              m_maxConnections;          //!< key = nodeId
+    std::map<uint32_t, std::map<Ipv4Address, double>>    m_peersDownloadSpeeds;     //!< key1 = nodeId, key2 = Ipv4Address of peer
+    std::map<uint32_t, std::map<Ipv4Address, double>>    m_peersUploadSpeeds;       //!< key1 = nodeId, key2 = Ipv4Address of peer
+    std::map<uint32_t, nodeInternetSpeeds>               m_nodesInternetSpeeds;     //!< key = nodeId
+    std::map<uint32_t, int>                              m_minConnections;          //!< key = nodeId
+    std::map<uint32_t, int>                              m_maxConnections;          //!< key = nodeId
 
-  std::default_random_engine                     m_generator;
-  std::piecewise_constant_distribution<double>   m_nodesDistribution;
-  std::piecewise_constant_distribution<double>   m_connectionsDistribution;
-  std::piecewise_constant_distribution<double>   m_europeDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_europeUploadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_northAmericaDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_northAmericaUploadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_asiaPacificDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_asiaPacificUploadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_japanDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_japanUploadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_southAmericaDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_southAmericaUploadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_australiaDownloadBandwidthDistribution;
-  std::piecewise_constant_distribution<double>   m_australiaUploadBandwidthDistribution;
+    std::default_random_engine                     m_generator;
+    std::piecewise_constant_distribution<double>   m_nodesDistribution;
+    std::piecewise_constant_distribution<double>   m_connectionsDistribution;
+    std::piecewise_constant_distribution<double>   m_europeDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_europeUploadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_northAmericaDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_northAmericaUploadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_asiaPacificDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_asiaPacificUploadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_japanDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_japanUploadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_southAmericaDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_southAmericaUploadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_australiaDownloadBandwidthDistribution;
+    std::piecewise_constant_distribution<double>   m_australiaUploadBandwidthDistribution;
 
 };
 
