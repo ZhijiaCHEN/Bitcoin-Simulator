@@ -17,6 +17,7 @@
 #include <fstream>
 #include <time.h>
 #include <sys/time.h>
+#include <string>
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -62,7 +63,7 @@ main (int argc, char *argv[])
     const int secsPerMin = 60;
     const uint16_t bitcoinPort = 8333;
     const double realAverageBlockGenIntervalMinutes = 10; //minutes
-    int targetNumberOfBlocks = 100;
+    int targetNumberOfBlocks = 10;
     double averageBlockGenIntervalSeconds = 10 * secsPerMin; //seconds
     double fixedHashRate = 0.5;
     int start = 0;
@@ -70,10 +71,46 @@ main (int argc, char *argv[])
     int totalNoNodes;
     int minConnectionsPerNode = -1;
     int maxConnectionsPerNode = -1;
-    
+    double *minersHash;
     enum BitcoinRegion *minersRegions;
     int noMiners;
-    char *topo = (char *)"topo.json";
+    std::string topo = "topo.json";
+
+#ifdef MPI_TEST
+  
+    double bitcoinMinersHash[] = {0.289, 0.196, 0.159, 0.133, 0.066, 0.054,
+                                    0.029, 0.016, 0.012, 0.012, 0.012, 0.009,
+                                    0.005, 0.005, 0.002, 0.002};
+    enum BitcoinRegion bitcoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC, NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA,
+                                                EUROPE, EUROPE, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA, EUROPE,
+                                                NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA};
+
+    double litecoinMinersHash[] = {0.366, 0.314, 0.122, 0.072, 0.028, 0.024, 0.022, 0.018, 0.012, 0.01, 0.006, 0.006};
+    enum BitcoinRegion litecoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC, NORTH_AMERICA, EUROPE, NORTH_AMERICA,
+                                                    NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA};	
+
+    double dogecoinMinersHash[] = {0.33, 0.26, 0.19, 0.09, 0.03, 0.02, 0.02, 0.02, 0.01, 0.01, 0.01, 0.01};
+    enum BitcoinRegion dogecoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC, NORTH_AMERICA, EUROPE, NORTH_AMERICA,
+                                                    NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA, NORTH_AMERICA};
+#else
+        
+
+    /*   double bitcoinMinersHash[] = {1};
+    enum BitcoinRegion bitcoinMinersRegions[] = {ASIA_PACIFIC}; */
+    double bitcoinMinersHash[] = {0.5, 0.5};
+    enum BitcoinRegion bitcoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC};
+    /*   double bitcoinMinersHash[] = {0.4, 0.3, 0.3};
+    enum BitcoinRegion bitcoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC}; */
+    
+    double litecoinMinersHash[] = {0.366, 0.314, 0.122, 0.072, 0.028, 0.024, 0.022, 0.018, 0.012, 0.01, 0.006, 0.006};
+    enum BitcoinRegion litecoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC, NORTH_AMERICA, EUROPE, NORTH_AMERICA,
+                                                    NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA, NORTH_AMERICA};	
+
+    double dogecoinMinersHash[] = {0.33, 0.26, 0.19, 0.09, 0.03, 0.02, 0.02, 0.02, 0.04};
+    enum BitcoinRegion dogecoinMinersRegions[] = {ASIA_PACIFIC, ASIA_PACIFIC, ASIA_PACIFIC, NORTH_AMERICA, EUROPE, NORTH_AMERICA,
+                                                    NORTH_AMERICA, ASIA_PACIFIC, NORTH_AMERICA};
+#endif
+
     double averageBlockGenIntervalMinutes = averageBlockGenIntervalSeconds/secsPerMin;
     double stop;
 
@@ -83,7 +120,8 @@ main (int argc, char *argv[])
     std::map<uint32_t, std::map<Ipv4Address, double>>    peersUploadSpeeds;
     std::map<uint32_t, nodeInternetSpeeds>               nodesInternetSpeeds;
     std::vector<uint32_t>                                miners;
-    std::vector<double>                                  minersHash;
+    //std::vector<double>                                  myMinersHash;
+    
     int                                                  nodesInSystemId0 = 0;
   
     Time::SetResolution (Time::NS);
@@ -103,17 +141,14 @@ main (int argc, char *argv[])
     cmd.AddValue ("blockTorrent", "Enable the BlockTorrent protocol", blockTorrent);
     cmd.AddValue ("spv", "Enable the spv mechanism", spv);
     cmd.AddValue ("topo", "custom topology json file", topo);
-
     cmd.Parse(argc, argv);
     
-   
-
     averageBlockGenIntervalSeconds = averageBlockGenIntervalMinutes * secsPerMin;
     stop = targetNumberOfBlocks * averageBlockGenIntervalMinutes; //seconds
-    nodeStatistics *stats = new nodeStatistics[totalNoNodes];
+    nodeStatistics *stats;
     averageBlockGenIntervalMinutes = averageBlockGenIntervalSeconds/secsPerMin;
 
-    #ifdef MPI_TEST
+#ifdef MPI_TEST
     // Distributed simulation setup; by default use granted time window algorithm.
     if(nullmsg) 
     {
@@ -134,6 +169,21 @@ main (int argc, char *argv[])
     uint32_t systemId = 0;
     uint32_t systemCount = 1;
 #endif
+    std::cout<<"topology file: "<<topo<<std::endl;
+    BitcoinTopologyHelper bitcoinTopologyHelper (topo.c_str(), systemCount, cryptocurrency, 5, systemId);
+    const Document& topoJson = bitcoinTopologyHelper.GetTopologyJson();
+    totalNoNodes = topoJson["totalNoNodes"].GetInt();
+    stats = new nodeStatistics[totalNoNodes];
+    noMiners = topoJson["noMiners"].GetInt();
+    minersRegions = new enum BitcoinRegion[noMiners];
+    minersHash = new double[noMiners];
+    int i = 0;
+    for (auto& node : topoJson["nodes"].GetArray())
+    {
+        minersHash[i] = node["hashRate"].GetDouble();
+        minersRegions[i] = (enum BitcoinRegion)node["region"].GetInt();
+        i++;
+    }
 
     //LogComponentEnable("BitcoinNode", LOG_LEVEL_INFO);
     //LogComponentEnable("BitcoinMiner", LOG_LEVEL_INFO);
@@ -147,11 +197,9 @@ main (int argc, char *argv[])
         std::cout << "You have set both the unsolicited/relayNetwork/unsolicitedRelayNetwork flag\n";
         return 0;
     }
-  
-    BitcoinTopologyHelper bitcoinTopologyHelper (topo, systemCount, cryptocurrency, 5, systemId);
-    const Document& topoJson = bitcoinTopologyHelper.GetTopologyJson();
-    totalNoNodes = topoJson["totalNoNodes"].GetInt();
-    noMiners = topoJson["noMiners"].GetInt();
+
+    //BitcoinTopologyHelper bitcoinTopologyHelper (systemCount, totalNoNodes, noMiners, minersRegions, cryptocurrency, -1, -1, 5, systemId);
+    
 
     // Install stack on Grid
     InternetStackHelper stack;
@@ -162,26 +210,24 @@ main (int argc, char *argv[])
     ipv4InterfaceContainer = bitcoinTopologyHelper.GetIpv4InterfaceContainer();
     nodesConnections = bitcoinTopologyHelper.GetNodesConnectionsIps();
     miners = bitcoinTopologyHelper.GetMiners();
-    minersHash = bitcoinTopologyHelper.GetMinersHashRate();
+    //myMinersHash = bitcoinTopologyHelper.GetMinersHashRate();
     peersDownloadSpeeds = bitcoinTopologyHelper.GetPeersDownloadSpeeds();
     peersUploadSpeeds = bitcoinTopologyHelper.GetPeersUploadSpeeds();
     nodesInternetSpeeds = bitcoinTopologyHelper.GetNodesInternetSpeeds();
     std::cout<<"nodesInternetSpeeds"<<std::endl;
     if (systemId == 0)
         PrintBitcoinRegionStats(bitcoinTopologyHelper.GetBitcoinNodesRegions(), totalNoNodes);
-        std::cout<<"PrintBitcoinRegionStats"<<std::endl;
 
     //Install miners
-    std::cout<<"Am I here?"<<std::endl;
-    std::cout<<"InetSocketAddress: "<<InetSocketAddress (Ipv4Address::GetAny (), bitcoinPort)<<std::endl;
-    std::cout<<"nodesConnections[miners[0]]: "<<nodesConnections[miners[0]][0]<<std::endl;
-    std::cout<<"noMiners: "<<noMiners<<std::endl;
+    //std::cout<<"InetSocketAddress: "<<InetSocketAddress (Ipv4Address::GetAny (), bitcoinPort)<<std::endl;
+    //std::cout<<"nodesConnections[miners[0]]: "<<nodesConnections[miners[0]][0]<<std::endl;
+    //std::cout<<"noMiners: "<<noMiners<<std::endl;
     //std::cout<<"peersDownloadSpeeds[0]: "<<peersDownloadSpeeds[0][0]<<std::endl;
     //std::cout<<"peersUploadSpeeds[0]: "<<peersUploadSpeeds[0][0]<<std::endl;
-    std::cout<<"nodesInternetSpeeds[0]: "<<nodesInternetSpeeds[0].downloadSpeed<<std::endl;
-    std::cout<<"stats: "<<stats<<std::endl;
-    std::cout<<"minersHash[0]: "<<minersHash[0]<<std::endl;
-    std::cout<<"averageBlockGenIntervalSeconds: "<<averageBlockGenIntervalSeconds<<std::endl;
+    //std::cout<<"nodesInternetSpeeds[0]: "<<nodesInternetSpeeds[0].downloadSpeed<<std::endl;
+    //std::cout<<"stats: "<<stats<<std::endl;
+    //std::cout<<"minersHash[0]: "<<minersHash[0]<<std::endl;
+    //std::cout<<"averageBlockGenIntervalSeconds: "<<averageBlockGenIntervalSeconds<<std::endl;
     BitcoinMinerHelper bitcoinMinerHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), bitcoinPort),
                                             nodesConnections[miners[0]], noMiners, peersDownloadSpeeds[0], peersUploadSpeeds[0],
                                             nodesInternetSpeeds[0], stats, minersHash[0], averageBlockGenIntervalSeconds);
@@ -252,7 +298,7 @@ main (int argc, char *argv[])
     
     //Install simple nodes
     BitcoinNodeHelper bitcoinNodeHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), bitcoinPort), 
-                                            nodesConnections[0], peersDownloadSpeeds[0],  peersUploadSpeeds[0], nodesInternetSpeeds[0], stats);
+                                            nodesConnections[0], peersDownloadSpeeds[0],peersUploadSpeeds[0], nodesInternetSpeeds[0], stats);
     ApplicationContainer bitcoinNodes;
     std::cout<<"//Install simple nodes"<<std::endl;
     for(auto &node : nodesConnections)
@@ -295,9 +341,7 @@ main (int argc, char *argv[])
     }
     
     bitcoinNodes.Start (Seconds (start));
-    std::cout<<"//nodes started"<<std::endl;
     bitcoinNodes.Stop (Minutes (stop));
-    std::cout<<"nodes stopped"<<std::endl;
     
     if (systemId == 0)
         std::cout << "The applications have been setup.\n";
@@ -310,7 +354,6 @@ main (int argc, char *argv[])
     Simulator::Stop (Minutes (stop + 0.1));
     Simulator::Run ();
     Simulator::Destroy ();
-    std::cout<<"Simulator destoryed"<<std::endl;
 #ifdef MPI_TEST
 
   int            blocklen[38] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -465,10 +508,13 @@ main (int argc, char *argv[])
 #ifdef MPI_TEST
 
   // Exit the MPI execution environment
+  std::cout<<"MpiInterface::Disable ();"<<std::endl;
   MpiInterface::Disable ();
+  std::cout<<"MpiInterface::Disable ();"<<std::endl;
 #endif
-
+    std::cout<<"delete[] stats"<<std::endl;
   delete[] stats;
+  std::cout<<"delete[] stats"<<std::endl;
   return 0;
   
 #else
@@ -851,12 +897,10 @@ void PrintTotalStats (nodeStatistics *stats, int totalNodes, double start, doubl
 
 void PrintBitcoinRegionStats (uint32_t *bitcoinNodesRegions, uint32_t totalNodes)
 {
-    std::cout<<"totalNodes passed to PrintBitcoinRegionStats: "<<totalNodes<<std::endl;
     uint32_t regions[7] = {0, 0, 0, 0, 0, 0, 0};
     
     for (uint32_t i = 0; i < totalNodes; i++)
     {
-        std::cout << "bitcoinNodesRegions[i]: "<<bitcoinNodesRegions[i]<<std::endl;
         regions[bitcoinNodesRegions[i]]++;
     }
     
