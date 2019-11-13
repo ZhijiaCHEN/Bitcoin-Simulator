@@ -142,6 +142,7 @@ main (int argc, char *argv[])
     cmd.AddValue ("spv", "Enable the spv mechanism", spv);
     cmd.AddValue ("topo", "custom topology json file", topo);
     cmd.Parse(argc, argv);
+    std::cout<<"target number of blocks: "<<targetNumberOfBlocks<<std::endl;
     
     averageBlockGenIntervalSeconds = averageBlockGenIntervalMinutes * secsPerMin;
     stop = targetNumberOfBlocks * averageBlockGenIntervalMinutes; //seconds
@@ -231,7 +232,7 @@ main (int argc, char *argv[])
     BitcoinMinerHelper bitcoinMinerHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), bitcoinPort),
                                             nodesConnections[miners[0]], noMiners, peersDownloadSpeeds[0], peersUploadSpeeds[0],
                                             nodesInternetSpeeds[0], stats, minersHash[0], averageBlockGenIntervalSeconds);
-    std::cout<<"instanciated minerhelpler"<<std::endl;
+
     ApplicationContainer bitcoinMiners;
     int count = 0;
     if (testScalability == true)
@@ -507,15 +508,11 @@ main (int argc, char *argv[])
   
 #ifdef MPI_TEST
 
-  // Exit the MPI execution environment
-  std::cout<<"MpiInterface::Disable ();"<<std::endl;
-  MpiInterface::Disable ();
-  std::cout<<"MpiInterface::Disable ();"<<std::endl;
+    // Exit the MPI execution environment
+    MpiInterface::Disable ();
 #endif
-    std::cout<<"delete[] stats"<<std::endl;
-  delete[] stats;
-  std::cout<<"delete[] stats"<<std::endl;
-  return 0;
+    delete[] stats;
+    return 0;
   
 #else
   NS_FATAL_ERROR ("Can't use distributed simulator without MPI compiled in");

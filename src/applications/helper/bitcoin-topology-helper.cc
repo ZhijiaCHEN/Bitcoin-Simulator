@@ -2003,11 +2003,9 @@ BitcoinTopologyHelper::BitcoinTopologyHelper (const char* topoFile, uint32_t noC
     //Create first the links between miners
     for(auto miner = m_miners.begin(); miner != m_miners.end(); miner++)  
     {
-        std::cout<<"this miner value: "<<*miner<<std::endl;
         //for(std::vector<uint32_t>::const_iterator it = m_nodesConnections[*miner].begin(); it != m_nodesConnections[*miner].begin() + m_miners.size() - 1; it++)
         for(std::vector<uint32_t>::const_iterator it = m_nodesConnections[*miner].begin(); it != m_nodesConnections[*miner].end(); it++)
         {
-            std::cout<<"this it value: "<<*it<<std::endl;
             if ( *it > *miner)	//Do not recreate links
             {
                 //std::cout<<"*miner"<<*miner<<std::endl;
